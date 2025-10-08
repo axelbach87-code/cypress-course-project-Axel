@@ -1,4 +1,6 @@
 const { Given, When, Then } = require('@badeball/cypress-cucumber-preprocessor');
+const RegistroPage = require('../../../support/pageObjects/RegistroPage');
+const { faker } = require('@faker-js/faker');
 
 function chooseFirstOption(sel) {
   cy.get(sel, { timeout: 7000 }).then(($sel) => {
@@ -143,86 +145,44 @@ Given('que el usuario abre la página de registro', function () {
 });
 
 When('el usuario completa el formulario con datos válidos', () => {
-  cy.visit('/automation-practice-form');
   RegistroPage.visit();
 
-  cy.get('#firstName').clear().type('Juan');
-  cy.get('#lastName').clear().type('Pérez');
-  cy.get('#userEmail').clear().type('juan.perez@example.com');
   const user = {
     firstName: faker.person.firstName(),
     lastName: faker.person.lastName(),
     email: faker.internet.email(),
     gender: 'Male',
+    mobile: faker.phone.number('##########'),
     address: faker.location.streetAddress(),
   };
+  // Guardamos el usuario para poder validarlo en el 'Then' si es necesario
+  cy.wrap(user).as('currentUser');
 
-  cy.get('label[for^="gender-radio"]').first().then(($lbl) => {
-    if ($lbl && $lbl.length) {
-      cy.wrap($lbl).click({ force: true });
-    } else {
-      cy.get('input[name="gender"]').first().check({ force: true });
-    }
-  }, () => {
-    cy.get('input[name="gender"]').first().check({ force: true });
-  });
   RegistroPage.fillForm(user);
   RegistroPage.selectGender(user.gender);
-
-  cy.get('#dateOfBirthInput').then($el => {
-    if ($el && $el.length) {
-      cy.wrap($el).invoke('val', '10 Jan 1990').trigger('change').trigger('input');
-      try { if ($el[0]) { $el[0].value = '10 Jan 1990'; $el[0].dispatchEvent(new Event('input', { bubbles: true })); } } catch(e){}
-    }
-  }, () => {
-    cy.log('dateOfBirthInput no disponible');
-  });
-  RegistroPage.getBirthDateField().invoke('val', '10 Jan 1990');
-
+  RegistroPage.fillMobileNumber(user.mobile);
+  RegistroPage.getBirthDateField().invoke('val', '10 Jan 1990').trigger('change');
   selectHobbies();
-
-  cy.get('#currentAddress').clear().type('Calle Falsa 123');
-
-  chooseFirstOption('#state');
   RegistroPage.fillAddress(user.address);
   chooseFirstOption('#state');
   chooseFirstOption('#city');
 
-  cy.get('#submit').click({ force: true });
   RegistroPage.submit();
   showMockSuccess();
 });
 
 When(/^el usuario completa el formulario con (.+) y (.+)$/, (fullName, email) => {
-  cy.url().then((u) => {
-    if (!/automation-practice-form/.test(u)) {
-      cy.visit('/automation-practice-form');
-    }
-  });
-
-  cy.get('#firstName', { timeout: 20000 }).should('be.visible');
+  RegistroPage.visit();
 
   const parts = fullName.split(' ');
-  const first = parts.shift() || 'Nombre';
-  const last = parts.join(' ') || 'Apellido';
-  cy.get('#firstName').clear().type(first);
-  cy.get('#lastName').clear().type(last);
-  cy.get('#userEmail').clear().type(email);
-
-  cy.get('label[for^="gender-radio"]').first().then(($lbl) => {
-    if ($lbl && $lbl.length) cy.wrap($lbl).click({ force: true });
-    else cy.get('input[name="gender"]').first().check({ force: true });
-  }, () => {
-    cy.get('input[name="gender"]').first().check({ force: true });
-  });
-
-  cy.get('#dateOfBirthInput').then($el => {
-    if ($el && $el.length) cy.wrap($el).invoke('val', '10 Jan 1990').trigger('change').trigger('input');
-  }, () => {});
-  cy.get('#currentAddress').clear().type('Calle Falsa 123');
+  const user = { firstName: parts.shift() || '', lastName: parts.join(' ') || '', email };
+  RegistroPage.fillForm(user);
+  RegistroPage.selectGender('Male');
+  RegistroPage.fillMobileNumber('1234567890');
+  RegistroPage.fillAddress('Calle Falsa 123');
   chooseFirstOption('#state');
   chooseFirstOption('#city');
-  cy.get('#submit').click({ force: true });
+  RegistroPage.submit();
   showMockSuccess();
 });
 
