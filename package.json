@@ -4,7 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test:dev": "cypress run --env ENV=DEV",
+    "test:tst": "cypress run --env ENV=TST",
+    "test:ui": "cypress run --env TYPE=UI",
+    "test:api": "cypress run --env TYPE=API",
+    "test:all": "cypress run",
+    "open:chrome": "cypress open --browser chrome",
+    "open:firefox": "cypress open --browser firefox",
+    "report:generate": "node generate-report.js",
+    "test:report": "npm run test:all || npm run report:generate"
   },
   "keywords": [],
   "author": "",
@@ -12,7 +20,8 @@
   "devDependencies": {
     "@badeball/cypress-cucumber-preprocessor": "^23.0.0",
     "@bahmutov/cypress-esbuild-preprocessor": "^2.2.5",
-    "@cypress/browserify-preprocessor": "^3.0.2",
+    "@faker-js/faker": "^8.4.1",
+    "cucumber-html-reporter": "^7.2.0",
     "cypress": "^15.1.0"
   }
 }
