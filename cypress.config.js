@@ -24,7 +24,6 @@ module.exports = defineConfig({
 
       config.baseUrl = urls[environment].baseUrl;
 
-      // expose API_URL and API_KEY to Cypress.env (leer API_KEY desde variables de entorno del sistema si existe)
       config.env = config.env || {};
       config.env.API_URL = config.env.API_URL || urls[environment].apiUrl;
       config.env.API_KEY = config.env.API_KEY || process.env.API_KEY || '';

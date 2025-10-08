@@ -8,7 +8,6 @@ const options = {
   scenarioTimestamp: true,
   storeScreenshots: true,
   screenshotsDirectory: 'cypress/screenshots/',
-  // No intentar abrir el reporte en un entorno de CI, solo localmente.
   launchReport: process.env.CI ? false : true,
   metadata: {
     "App Version": "1.0.0",

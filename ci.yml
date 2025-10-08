@@ -1,31 +1,24 @@
-# Nombre del flujo de trabajo
 name: Cypress Tests
 
 on:
-  # Se ejecuta en cada push a la rama 'main' o 'master'
   push:
     branches: [ main, master ]
-  # Se ejecuta en cada pull request hacia 'main' o 'master'
   pull_request:
     branches: [ main, master ]
 
 jobs:
   cypress-run:
-    # El tipo de máquina virtual donde se ejecutarán los tests
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Obtener el código del repositorio
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Instalar Node.js en la máquina virtual
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' # Usar una versión LTS de Node.js
+          node-version: '18'
 
-      # 3. Cachear dependencias de npm para acelerar las instalaciones
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
@@ -34,23 +27,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # 4. Instalar dependencias del proyecto (usa 'npm ci' para instalaciones limpias y rápidas)
       - name: Install dependencies
         run: npm ci
 
-      # 5. Ejecutar los tests, grabar en Cypress Cloud y generar reporte local
       - name: Run Cypress tests and record
         run: npm run test:all -- --record --key ${{ secrets.CYPRESS_RECORD_KEY }}
-        continue-on-error: true # Continúa para que el reporte local se genere incluso si los tests fallan
+        continue-on-error: true
 
-      # 6. Generar el reporte HTML local
       - name: Generate local report
         run: npm run report:generate
 
-      # 7. Guardar el reporte como un "artefacto" para poder descargarlo
       - name: Upload test report
         uses: actions/upload-artifact@v4
         with:
           name: local-cucumber-report
           path: cypress/reports/cucumber_report.html
-          if-no-files-found: error # Falla el paso si el reporte no se encuentra
+          if-no-files-found: error

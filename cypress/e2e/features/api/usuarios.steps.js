@@ -17,7 +17,6 @@ Given("el usuario define un nuevo nombre {string} y trabajo {string}", (name, jo
 When(/^se realiza una petición GET a \/users\?page=(\d+)$/, (page) => {
   const p = Number(page);
 
-  // Soporte mock para GET
   if (Cypress.env('MOCK_GET')) {
     const fakeData = Array.from({ length: 6 }).map((_, i) => ({
       id: i + 1,
@@ -38,9 +37,7 @@ When(/^se realiza una petición GET a \/users\?page=(\d+)$/, (page) => {
   }).as('apiResponse');
 });
 
-// Reemplazo: usar RegExp para evitar problemas con '/'
 When(/^se realiza una petición POST a \/users$/, () => {
-  // Mockear POST cuando se pasa --env MOCK_POST=true
   if (Cypress.env('MOCK_POST')) {
     cy.intercept('POST', 'https://reqres.in/api/users', (req) => {
       req.reply({
@@ -58,7 +55,6 @@ When(/^se realiza una petición POST a \/users$/, () => {
   return cy.get('@newUser').then((u) => {
     const apiKey = Cypress.env('API_KEY');
 
-    // Mock POST if requested
     if (!apiKey && Cypress.env('MOCK_POST')) {
       const fakeBody = { id: 'stub-id-1', name: u.name, job: u.job, createdAt: new Date().toISOString() };
       return cy.wrap({ status: 201, body: fakeBody }).as('apiResponse');
@@ -96,7 +92,6 @@ Then('la respuesta contiene un id', () => {
   cy.get('@apiResponse').its('body').should('have.property', 'id');
 });
 
-// Nuevo step: valida la estructura de cada usuario en body.data
 Then('la estructura de cada usuario debe ser correcta', () => {
   cy.get('@apiResponse').its('body.data').then((arr) => {
     expect(arr).to.be.an('array');
@@ -106,7 +101,6 @@ Then('la estructura de cada usuario debe ser correcta', () => {
   });
 });
 
-// Comprueba un campo numérico en el body de la respuesta (soporta keys simples y anidadas con '.')
 Then('el campo {string} de la respuesta debe ser {int}', (field, expected) => {
   function getByPath(obj, path) {
     return path.split('.').reduce((o, p) => (o && o[p] !== undefined) ? o[p] : undefined, obj);
@@ -117,7 +111,6 @@ Then('el campo {string} de la respuesta debe ser {int}', (field, expected) => {
   });
 });
 
-// comprueba que el POST devuelve los campos name/job
 Then("los datos de {string} y {string} deben ser devueltos en la respuesta", (nameLabel, jobLabel) => {
   cy.get('@newUser').then((u) => {
     cy.get('@apiResponse').its('body').then((body) => {
@@ -127,7 +120,6 @@ Then("los datos de {string} y {string} deben ser devueltos en la respuesta", (na
   });
 });
 
-// soporta "la respuesta debe incluir un 'id' autogenerado"
 Then(/^la respuesta debe incluir un ['"]?(.+?)['"]? autogenerado$/, (field) => {
   cy.get('@apiResponse').its('body').then((body) => {
     expect(body).to.have.property(field);
@@ -139,7 +131,6 @@ Then('el timestamp de creación debe existir', () => {
   cy.get('@apiResponse').its('body').then((body) => {
     expect(body).to.have.property('createdAt');
     const createdAt = body.createdAt;
-    // ISO 8601 aproximado (acepta ms Z)
     const isoRe = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
     expect(String(createdAt)).to.match(isoRe);
   });

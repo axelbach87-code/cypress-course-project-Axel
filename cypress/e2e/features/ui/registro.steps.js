@@ -1,9 +1,7 @@
 const { Given, When, Then } = require('@badeball/cypress-cucumber-preprocessor');
 
-// helper visible para todos los pasos
 function chooseFirstOption(sel) {
   cy.get(sel, { timeout: 7000 }).then(($sel) => {
-    // comprobación defensiva
     if ($sel && $sel.length) {
       cy.wrap($sel).click({ force: true });
       cy.get('div[role="option"], .css-26l3qy-menu div, .menu div', { timeout: 7000 })
@@ -11,31 +9,25 @@ function chooseFirstOption(sel) {
         .click({ force: true });
     }
   }, () => {
-    // fallback silencioso si no existe el select
     cy.log(`chooseFirstOption: selector ${sel} no disponible`);
   });
 }
 
-// nueva función robusta para seleccionar hobbies (reemplaza la anterior)
 function selectHobbies() {
-  // usa el DOM directamente para evitar errores cuando Cypress entrega valores inesperados
   return cy.document({ log: false }).then((doc) => {
     if (!doc) {
       cy.log('selectHobbies: document no disponible');
       return;
     }
 
-    // 1) intenta checkboxes visibles primero
     const boxes = doc.querySelectorAll('input[type="checkbox"]');
     const boxesLen = boxes ? boxes.length : 0;
     if (boxesLen > 0) {
       const visibles = Array.from(boxes).filter((b) => {
-        // offsetParent es una comprobación simple de visibilidad
         return b.offsetParent !== null;
       });
 
       if (visibles && visibles.length > 0) {
-        // seleccionar hasta 2 visibles usando comandos Cypress
         visibles.slice(0, 2).forEach((el) => {
           cy.wrap(el).check({ force: true });
         });
@@ -43,7 +35,6 @@ function selectHobbies() {
       }
     }
 
-    // 2) fallback: labels con texto conocido
     const allLabels = Array.from(doc.querySelectorAll('label')) || [];
     const match = allLabels.find((l) => /sports|reading|music/i.test((l.textContent || '').trim()));
     if (match) {
@@ -51,20 +42,15 @@ function selectHobbies() {
       return;
     }
 
-    // 3) último fallback: log
     cy.log('selectHobbies: no se encontraron checkboxes ni labels de hobbies');
   });
 }
 
-// helper para mostrar un modal de éxito cuando MOCK_POST=true (evita fallos por falta de modal real)
 function showMockSuccess() {
   if (!Cypress.env('MOCK_POST')) return;
-  // devolver la promesa para que Cypress espere la inyección
   return cy.window({ log: false }).then((win) => {
     try {
-      // no duplicar
       if (win.document.getElementById('example-modal-sizes-title-lg') || win.document.querySelector('.mock-success')) return;
-      // backdrop
       const backdrop = win.document.createElement('div');
       backdrop.className = 'modal-backdrop fade show mock-success-backdrop';
       backdrop.style.position = 'fixed';
@@ -75,7 +61,6 @@ function showMockSuccess() {
       backdrop.style.background = 'rgba(0,0,0,0.5)';
       backdrop.style.zIndex = 1040;
 
-      // modal structure compatible con estilos típicos
       const modal = win.document.createElement('div');
       modal.className = 'modal fade show mock-success';
       modal.setAttribute('role', 'dialog');
@@ -110,7 +95,6 @@ function showMockSuccess() {
       const p = win.document.createElement('p');
       p.textContent = 'Registro exitoso';
 
-      // close button (optional)
       const btn = win.document.createElement('button');
       btn.type = 'button';
       btn.className = 'btn-close';
@@ -130,14 +114,12 @@ function showMockSuccess() {
       dialog.appendChild(content);
       modal.appendChild(dialog);
 
-      // append to body
       win.document.body.appendChild(backdrop);
       win.document.body.appendChild(modal);
     } catch (e) {
       /* noop */
     }
   }).then(() => {
-    // pequeña espera para que Cypress pueda detectar el elemento visible
     return cy.wait(200);
   });
 }
@@ -145,19 +127,16 @@ function showMockSuccess() {
 Given('que el usuario abre la página de registro', function () {
   const url = 'https://demoqa.com/automation-practice-form';
 
-  // Opción para saltar los tests UI desde la CLI: --env SKIP_UI=true
   if (Cypress.env('SKIP_UI')) {
     this.skip();
     return;
   }
 
-  // Preflight request para comprobar disponibilidad y evitar que cy.visit falle con 502
   return cy.request({ url, failOnStatusCode: false }).then((res) => {
     if (res.status >= 200 && res.status < 400) {
       return cy.visit(url);
     }
 
-    // Si la página responde 5xx/4xx, saltamos el spec UI para no marcar todo como fallo
     Cypress.log({ name: 'skip', message: `Skipping UI spec: ${url} returned ${res.status}` });
     this.skip();
   });
@@ -165,13 +144,19 @@ Given('que el usuario abre la página de registro', function () {
 
 When('el usuario completa el formulario con datos válidos', () => {
   cy.visit('/automation-practice-form');
+  RegistroPage.visit();
 
-  // básicos
   cy.get('#firstName').clear().type('Juan');
   cy.get('#lastName').clear().type('Pérez');
   cy.get('#userEmail').clear().type('juan.perez@example.com');
+  const user = {
+    firstName: faker.person.firstName(),
+    lastName: faker.person.lastName(),
+    email: faker.internet.email(),
+    gender: 'Male',
+    address: faker.location.streetAddress(),
+  };
 
-  // género: intenta label asociado o primer radio visible
   cy.get('label[for^="gender-radio"]').first().then(($lbl) => {
     if ($lbl && $lbl.length) {
       cy.wrap($lbl).click({ force: true });
@@ -181,8 +166,9 @@ When('el usuario completa el formulario con datos válidos', () => {
   }, () => {
     cy.get('input[name="gender"]').first().check({ force: true });
   });
+  RegistroPage.fillForm(user);
+  RegistroPage.selectGender(user.gender);
 
-  // fecha (evita widget)
   cy.get('#dateOfBirthInput').then($el => {
     if ($el && $el.length) {
       cy.wrap($el).invoke('val', '10 Jan 1990').trigger('change').trigger('input');
@@ -191,32 +177,29 @@ When('el usuario completa el formulario con datos válidos', () => {
   }, () => {
     cy.log('dateOfBirthInput no disponible');
   });
+  RegistroPage.getBirthDateField().invoke('val', '10 Jan 1990');
 
-  // hobbies: usa helper robusto
   selectHobbies();
 
-  // dirección (campo obligatorio)
   cy.get('#currentAddress').clear().type('Calle Falsa 123');
 
-  // seleccionar estado/ciudad usando helper
+  chooseFirstOption('#state');
+  RegistroPage.fillAddress(user.address);
   chooseFirstOption('#state');
   chooseFirstOption('#city');
 
-  // submit
   cy.get('#submit').click({ force: true });
-  // inyecta modal fake si estamos en modo mock
+  RegistroPage.submit();
   showMockSuccess();
 });
 
 When(/^el usuario completa el formulario con (.+) y (.+)$/, (fullName, email) => {
-  // ensure we are on the form page — if not, navigate there
   cy.url().then((u) => {
     if (!/automation-practice-form/.test(u)) {
       cy.visit('/automation-practice-form');
     }
   });
 
-  // wait for the form to be available
   cy.get('#firstName', { timeout: 20000 }).should('be.visible');
 
   const parts = fullName.split(' ');
@@ -233,7 +216,6 @@ When(/^el usuario completa el formulario con (.+) y (.+)$/, (fullName, email) =>
     cy.get('input[name="gender"]').first().check({ force: true });
   });
 
-  // fecha (evita widget)
   cy.get('#dateOfBirthInput').then($el => {
     if ($el && $el.length) cy.wrap($el).invoke('val', '10 Jan 1990').trigger('change').trigger('input');
   }, () => {});
@@ -262,7 +244,6 @@ When('ingresa su fecha de nacimiento', () => {
 });
 
 When('selecciona sus hobbies', () => {
-  // reutiliza helper
   selectHobbies();
 });
 
